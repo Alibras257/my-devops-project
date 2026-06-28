@@ -49,3 +49,21 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/devops-project:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/devops-project:latest
+
+deploy:
+  needs: docker-deploy
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/devops-project:latest
+          docker stop devops-project || true
+          docker rm devops-project || true
+          docker run -d --name devops-project -p 80:8000 \
+            ${{ secrets.DOCKER_USERNAME }}/devops-project:latest
